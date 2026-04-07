@@ -14,6 +14,8 @@ A machine learning-based web application that predicts sales revenue based on ad
 - **Real-time Feedback**: Get instant predictions and actionable suggestions as you adjust budget values.
 - **Exportable Reports**: Download detailed CSV reports comparing actual data with model predictions.
 
+---
+
 ## 📈 Machine Learning Model
 
 The model is built using **Multiple Linear Regression**. 
@@ -23,6 +25,8 @@ The model is built using **Multiple Linear Regression**.
 - Model performance evaluated using **R² Score** and **Mean Squared Error (MSE)**.  
 - Trained on dataset: car_data.csv
 - Model file: model.pkl
+
+---
 
 ## 🛠️ Technologies Used
 
@@ -51,7 +55,9 @@ The model is built using **Multiple Linear Regression**.
 ## 📊 Data Visualization
 
 - Pie Chart → Shows contribution of each advertising medium  
-- Graphs → Show trends and prediction insights  
+- Graphs → Show trends and prediction insights
+
+---
 
 ## 📁 Project Structure
 
