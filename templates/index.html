@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SalesIQ — AI Sales Prediction</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">⚡ SalesIQ</div>
+  <div class="nav-links">
+    <a href="/" class="active">Home</a>
+    <a href="/predict_page">Predict</a>
+    <a href="/analytics">Analytics</a>
+    <a href="/download_report" class="btn-download" style="font-size:.8rem;padding:.4rem 1rem;">⬇ Report</a>
+  </div>
+</nav>
+
+<div class="page">
+  <section class="hero">
+    <div class="hero-badge animate">🤖 ML-Powered Forecasting</div>
+    <h1 class="animate delay-1">Predict Sales.<br>Maximize ROI.</h1>
+    <p class="animate delay-2">Enter your advertising budget across TV, Radio, and Newspaper to get instant AI-powered sales predictions with actionable insights.</p>
+
+    <div class="hero-stats animate delay-2">
+      <div class="stat-pill">📊 <strong>{{ stats.records }}</strong> data points</div>
+      <div class="stat-pill">💰 Avg Sales <strong>{{ stats.avg_sales }}K</strong></div>
+      <div class="stat-pill">🏆 Peak <strong>{{ stats.max_sales }}K</strong></div>
+    </div>
+
+    <div class="hero-cta animate delay-3">
+      <a href="/predict_page" class="btn-primary"><span>🚀 Start Predicting</span></a>
+      <a href="/analytics" class="btn-secondary">📈 View Analytics</a>
+    </div>
+  </section>
+
+  <!-- Feature cards -->
+  <div class="grid-3" style="margin-top:2rem;">
+    <div class="card animate delay-1">
+      <div class="card-title">🎯 Smart Prediction</div>
+      <p style="color:var(--muted);font-size:.9rem;line-height:1.6;">Linear regression model trained on real advertising data. Enter your budget and get instant sales forecasts.</p>
+    </div>
+    <div class="card animate delay-2">
+      <div class="card-title">📊 Deep Analytics</div>
+      <p style="color:var(--muted);font-size:.9rem;line-height:1.6;">Correlation heatmaps, pie charts, scatter plots, and trend analysis to understand which ads drive sales.</p>
+    </div>
+    <div class="card animate delay-3">
+      <div class="card-title">🤖 AI Suggestions</div>
+      <p style="color:var(--muted);font-size:.9rem;line-height:1.6;">After prediction, get intelligent budget recommendations and optimizer to maximize your sales ROI.</p>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

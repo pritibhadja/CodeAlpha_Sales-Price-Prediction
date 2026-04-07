@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SalesIQ — Analytics Pro</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .live-badge {
+      display: inline-flex; align-items: center; gap: .4rem;
+      font-size: .72rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+      color: #4ade80; border: 1px solid rgba(74,222,128,.3);
+      background: rgba(74,222,128,.08); border-radius: 50px; padding: .25rem .75rem;
+    }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; animation: livepulse 1.2s ease-in-out infinite; }
+    @keyframes livepulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(.65)} }
+
+    /* Input bar at top */
+    .input-bar {
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.5rem;
+      display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      position: relative; overflow: hidden;
+    }
+    .input-bar::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,240,255,.5), transparent);
+    }
+    .input-bar-label { font-size: .78rem; color: var(--muted); font-weight: 600; letter-spacing: .07em; text-transform: uppercase; white-space: nowrap; }
+    .input-bar-field { display: flex; align-items: center; gap: .5rem; }
+    .input-bar-field label { font-size: .8rem; color: var(--muted); white-space: nowrap; }
+    .input-bar-field input {
+      width: 100px; padding: .5rem .75rem;
+      background: rgba(255,255,255,.06); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: .9rem; font-family: 'Exo 2', sans-serif;
+      outline: none; transition: border-color .2s, box-shadow .2s;
+    }
+    .input-bar-field input:focus { border-color: var(--accent1); box-shadow: 0 0 0 3px rgba(0,240,255,.1); }
+    .input-bar-field input::placeholder { color: rgba(226,232,240,.25); }
+    .input-bar-pred {
+      margin-left: auto; text-align: right;
+    }
+    .input-bar-pred .pred-label { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .input-bar-pred .pred-val {
+      font-family: 'Exo 2', sans-serif; font-size: 1.6rem; font-weight: 800;
+      background: linear-gradient(135deg, var(--accent1), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      line-height: 1.1;
+    }
+
+    /* refresh bar */
+    .ref-strip { height: 2px; background: rgba(255,255,255,.06); border-radius: 1px; margin-top: .6rem; overflow: hidden; }
+    .ref-fill { height: 100%; background: linear-gradient(90deg, var(--accent1), var(--accent2)); border-radius: 1px; width: 0%; }
+
+    /* Corr bars */
+    .corr-row { display: flex; align-items: center; gap: .75rem; margin-bottom: .65rem; }
+    .corr-name { width: 90px; font-size: .82rem; color: var(--muted); }
+    .corr-bar-track { flex: 1; height: 8px; background: rgba(255,255,255,.08); border-radius: 50px; overflow: hidden; }
+    .corr-bar-fill { height: 100%; border-radius: 50px; transition: width .8s cubic-bezier(.23,1,.32,1); }
+    .corr-bar-fill.tv    { background: linear-gradient(90deg, var(--accent1), #0ea5e9); }
+    .corr-bar-fill.radio { background: linear-gradient(90deg, var(--accent2), #a855f7); }
+    .corr-bar-fill.news  { background: linear-gradient(90deg, var(--accent3), #f97316); }
+    .corr-val { width: 44px; text-align: right; font-size: .82rem; font-family: 'Exo 2', sans-serif; font-weight: 700; }
+
+    /* Heatmap */
+    .heatmap-grid { display: grid; grid-template-columns: 80px repeat(4,1fr); gap: 4px; font-size: .76rem; }
+    .hm-cell { padding: .55rem .3rem; border-radius: 6px; text-align: center; font-family: 'Exo 2', sans-serif; font-weight: 600; transition: transform .2s; cursor: default; }
+    .hm-cell:hover { transform: scale(1.06); }
+    .hm-label { display: flex; align-items: center; justify-content: flex-end; padding-right: .5rem; font-size: .73rem; color: var(--muted); }
+    .hm-header { color: var(--muted); font-weight: 600; text-align: center; display: flex; align-items: center; justify-content: center; font-size: .73rem; }
+
+    /* chart header */
+    .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .9rem; }
+    .chart-header .card-title { margin-bottom: 0; }
+
+    /* gain badge */
+    .gain-badge { display: inline-block; padding: .25rem .8rem; border-radius: 50px; font-size: .78rem; font-weight: 700; }
+    .gain-badge.pos { background: rgba(74,222,128,.1); color: #4ade80; border: 1px solid rgba(74,222,128,.3); }
+    .gain-badge.zero { background: rgba(255,255,255,.06); color: var(--muted); border: 1px solid var(--border); }
+
+    /* opt rows */
+    .opt-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; font-size: .88rem; }
+    .opt-label { color: var(--muted); }
+    .opt-val { font-family: 'Exo 2', sans-serif; font-weight: 700; color: var(--accent2); }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">⚡ SalesIQ</div>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/predict_page">Predict</a>
+    <a href="/analytics" class="active">Analytics</a>
+    <a href="/download_report" class="btn-download" style="font-size:.8rem;padding:.4rem 1rem;">⬇ Report</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- Header -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem;">
+    <div class="section-header animate" style="margin-bottom:0;">
+      <h2>📈 Analytics Pro Dashboard</h2>
+      <p>Enter your ad values — every chart updates instantly to reflect your exact inputs</p>
+    </div>
+    <div style="display:flex;gap:.75rem;align-items:center;">
+      <div class="live-badge"><div class="live-dot"></div> Input-Driven</div>
+      <a href="/download_report" class="btn-download animate">⬇️ Report</a>
+    </div>
+  </div>
+
+  <!-- ── INPUT BAR ── -->
+  <div class="input-bar animate">
+    <div class="input-bar-label">📊 Your Budget</div>
+    <div class="input-bar-field">
+      <label>📺 TV</label>
+      <input type="number" id="inp-tv" placeholder="e.g. 200" step="0.1" min="0">
+    </div>
+    <div class="input-bar-field">
+      <label>📻 Radio</label>
+      <input type="number" id="inp-radio" placeholder="e.g. 30" step="0.1" min="0">
+    </div>
+    <div class="input-bar-field">
+      <label>📰 Newspaper</label>
+      <input type="number" id="inp-news" placeholder="e.g. 20" step="0.1" min="0">
+    </div>
+    <div class="input-bar-pred" id="pred-box" style="display:none;">
+      <div class="pred-label">⚡ Predicted Sales</div>
+      <div class="pred-val" id="pred-val">—</div>
+      <div style="font-size:.72rem;color:var(--muted);">$000s</div>
+    </div>
+    <div style="font-size:.75rem;color:var(--muted);margin-left:auto;" id="input-hint">← Type values to update all charts</div>
+  </div>
+  <div class="ref-strip animate"><div class="ref-fill" id="ref-fill"></div></div>
+  <div style="font-size:.7rem;color:var(--muted);text-align:right;margin-bottom:1.25rem;" id="ref-label">waiting for input…</div>
+
+  <!-- ── KPI CARDS ── -->
+  <div class="grid-4" style="margin-bottom:1.5rem;">
+    <div class="stat-card c1 animate delay-1">
+      <div class="stat-label">Best Channel</div>
+      <div class="stat-value" id="kpi-best">📺 TV</div>
+      <div class="stat-sub" id="kpi-best-sub">dataset average</div>
+    </div>
+    <div class="stat-card c2 animate delay-2">
+      <div class="stat-label">Predicted Sales</div>
+      <div class="stat-value" id="kpi-pred">{{ avg_sales }}K</div>
+      <div class="stat-sub" id="kpi-pred-sub">dataset average</div>
+    </div>
+    <div class="stat-card c3 animate delay-3">
+      <div class="stat-label">TV Share</div>
+      <div class="stat-value" id="kpi-tv-pct">{{ tv_pct }}%</div>
+      <div class="stat-sub" id="kpi-tv-sub">of your total spend</div>
+    </div>
+    <div class="stat-card c4 animate delay-4">
+      <div class="stat-label">Optimal Sales</div>
+      <div class="stat-value" id="kpi-opt">{{ max_sales }}K</div>
+      <div class="stat-sub" id="kpi-opt-sub">best possible for budget</div>
+    </div>
+  </div>
+
+  <!-- ── ROW 1: Pie + Corr bars + Heatmap ── -->
+  <div class="grid-3" style="margin-bottom:1.5rem;">
+
+    <div class="card animate delay-1">
+      <div class="chart-header">
+        <div class="card-title">🥧 Ad Spend Distribution</div>
+        <div class="live-badge" style="font-size:.62rem;padding:.18rem .55rem;"><div class="live-dot" style="width:5px;height:5px;"></div> Live</div>
+      </div>
+      <div id="pie-subtitle" style="font-size:.78rem;color:var(--muted);margin-bottom:.75rem;">Enter values above to see your budget split</div>
+      <div class="chart-wrap" style="height:210px;"><canvas id="pieChart"></canvas></div>
+    </div>
+
+    <div class="card animate delay-2">
+      <div class="chart-header">
+        <div class="card-title">🔗 Contribution to Sales</div>
+        <div class="live-badge" style="font-size:.62rem;padding:.18rem .55rem;"><div class="live-dot" style="width:5px;height:5px;"></div> Live</div>
+      </div>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:1rem;">Each channel's share of your predicted sales</p>
+      <div class="corr-row">
+        <div class="corr-name">TV</div>
+        <div class="corr-bar-track"><div class="corr-bar-fill tv" id="bar-tv" style="width:0%"></div></div>
+        <div class="corr-val" id="bar-tv-val" style="color:var(--accent1);">—</div>
+      </div>
+      <div class="corr-row">
+        <div class="corr-name">Radio</div>
+        <div class="corr-bar-track"><div class="corr-bar-fill radio" id="bar-radio" style="width:0%"></div></div>
+        <div class="corr-val" id="bar-radio-val" style="color:var(--accent2);">—</div>
+      </div>
+      <div class="corr-row">
+        <div class="corr-name">Newspaper</div>
+        <div class="corr-bar-track"><div class="corr-bar-fill news" id="bar-news" style="width:0%"></div></div>
+        <div class="corr-val" id="bar-news-val" style="color:var(--accent3);">—</div>
+      </div>
+      <div style="margin-top:1.25rem;padding-top:.9rem;border-top:1px solid var(--border);">
+        <div class="card-title" style="font-size:.82rem;margin-bottom:.5rem;">🎯 Insight</div>
+        <p style="font-size:.8rem;color:var(--muted);line-height:1.6;" id="corr-insight">Enter your budget values to see a personalised insight.</p>
+      </div>
+    </div>
+
+    <div class="card animate delay-3">
+      <div class="chart-header">
+        <div class="card-title">🔥 Correlation Heatmap</div>
+        <div class="live-badge" style="font-size:.62rem;padding:.18rem .55rem;"><div class="live-dot" style="width:5px;height:5px;"></div> Live</div>
+      </div>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:.9rem;">Pairwise correlations in your input neighbourhood (±20%)</p>
+      <div id="heatmap-container"></div>
+    </div>
+  </div>
+
+  <!-- ── ROW 2: Scatter (always from dataset, show user point) ── -->
+  <div class="grid-3" style="margin-bottom:1.5rem;">
+    <div class="card animate delay-1">
+      <div class="card-title">📺 TV vs Sales</div>
+      <p style="font-size:.75rem;color:var(--muted);margin-bottom:.5rem;">🔴 Red dot = your input</p>
+      <div class="chart-wrap" style="height:210px;"><canvas id="scatterTV"></canvas></div>
+    </div>
+    <div class="card animate delay-2">
+      <div class="card-title">📻 Radio vs Sales</div>
+      <p style="font-size:.75rem;color:var(--muted);margin-bottom:.5rem;">🔴 Red dot = your input</p>
+      <div class="chart-wrap" style="height:210px;"><canvas id="scatterRadio"></canvas></div>
+    </div>
+    <div class="card animate delay-3">
+      <div class="card-title">📰 Newspaper vs Sales</div>
+      <p style="font-size:.75rem;color:var(--muted);margin-bottom:.5rem;">🔴 Red dot = your input</p>
+      <div class="chart-wrap" style="height:210px;"><canvas id="scatterNews"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ── ROW 3: Trend + Distribution ── -->
+  <div class="grid-2" style="margin-bottom:1.5rem;">
+    <div class="card animate delay-1">
+      <div class="card-title">📉 Sales Trend (all 200 campaigns)</div>
+      <div class="chart-wrap" style="height:230px;"><canvas id="trendChart"></canvas></div>
+    </div>
+    <div class="card animate delay-2">
+      <div class="card-title">📊 Sales Distribution</div>
+      <div class="chart-wrap" style="height:230px;"><canvas id="distChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ── ROW 4: Grouped bar + Optimizer ── -->
+  <div class="grid-2" style="margin-bottom:1.5rem;">
+    <div class="card animate">
+      <div class="card-title">📊 All Channels vs Sales (Top 30)</div>
+      <div class="chart-wrap" style="height:280px;"><canvas id="groupedBar"></canvas></div>
+    </div>
+
+    <div class="card animate delay-1">
+      <div class="chart-header">
+        <div class="card-title">⚙️ Budget Optimizer</div>
+        <div class="live-badge" style="font-size:.62rem;padding:.18rem .55rem;"><div class="live-dot" style="width:5px;height:5px;"></div> Live</div>
+      </div>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:.9rem;">
+        Best split for total budget <strong id="opt-total" style="color:var(--accent1);">—</strong>. Override:
+      </p>
+      <div style="display:flex;gap:.75rem;margin-bottom:.9rem;">
+        <input class="form-input" id="opt-override" type="number" placeholder="Custom budget" style="flex:1;">
+        <button class="btn-primary" onclick="runManualOptimize()" style="border-radius:10px;white-space:nowrap;"><span>🔍 Optimize</span></button>
+      </div>
+      <div id="opt-panel" style="display:none;">
+        <div style="font-size:.7rem;color:var(--muted);margin-bottom:.65rem;letter-spacing:.08em;text-transform:uppercase;">Optimal Allocation</div>
+        <div class="opt-row"><span class="opt-label">📺 TV</span><span class="opt-val" id="opt-tv">—</span></div>
+        <div class="opt-row"><span class="opt-label">📻 Radio</span><span class="opt-val" id="opt-radio">—</span></div>
+        <div class="opt-row"><span class="opt-label">📰 Newspaper</span><span class="opt-val" id="opt-news">—</span></div>
+        <div style="border-top:1px solid rgba(255,255,255,.08);margin:.6rem 0;"></div>
+        <div class="opt-row"><span class="opt-label">💰 Optimal Sales</span><span class="opt-val" style="color:var(--accent1);font-size:1.05rem;" id="opt-sales">—</span></div>
+        <div class="opt-row"><span class="opt-label">📊 Your Current</span><span class="opt-val" style="color:var(--muted);" id="opt-current">—</span></div>
+        <div style="text-align:center;margin-top:.5rem;"><span class="gain-badge" id="opt-gain">—</span></div>
+      </div>
+      <div id="opt-empty" style="padding:1.5rem 0;text-align:center;color:var(--muted);font-size:.85rem;">
+        Enter budget values above to auto-optimize
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const D = {{ analytics_json | safe }};
+
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.font.family = 'Exo 2';
+const gridOpts = { color: 'rgba(255,255,255,0.05)' };
+const tickOpts = { color: '#64748b' };
+
+// ═══════════════════════════════════════════
+//  STATIC CHARTS (dataset, don't change)
+// ═══════════════════════════════════════════
+
+// Scatter charts — dataset points + live user point overlay
+const scatterConfigs = [
+  { id:'scatterTV',    xArr: D.tv,    label:'TV',        color:'rgba(0,240,255,1)' },
+  { id:'scatterRadio', xArr: D.radio, label:'Radio',     color:'rgba(124,58,237,1)' },
+  { id:'scatterNews',  xArr: D.news,  label:'Newspaper', color:'rgba(245,158,11,1)' },
+];
+const scatterCharts = {};
+scatterConfigs.forEach(cfg => {
+  const pts = cfg.xArr.map((x,i) => ({x, y: D.sales[i]}));
+  scatterCharts[cfg.id] = new Chart(document.getElementById(cfg.id), {
+    type: 'scatter',
+    data: {
+      datasets: [
+        { label: cfg.label + ' (dataset)', data: pts,
+          backgroundColor: cfg.color.replace('1)','0.25)'), borderColor: cfg.color,
+          borderWidth: 1, pointRadius: 3, pointHoverRadius: 6 },
+        { label: 'Your Input', data: [],
+          backgroundColor: 'rgba(239,68,68,.9)', borderColor: '#ef4444',
+          borderWidth: 2, pointRadius: 9, pointHoverRadius: 12,
+          pointStyle: 'crossRot' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels:{ color:'#94a3b8', font:{size:11} } } },
+      scales: {
+        x: { title:{display:true, text: cfg.label+' Budget ($K)', color:'#94a3b8', font:{size:11}}, grid:gridOpts, ticks:tickOpts },
+        y: { title:{display:true, text:'Sales ($K)', color:'#94a3b8', font:{size:11}}, grid:gridOpts, ticks:tickOpts }
+      },
+      animation: { duration: 500 }
+    }
+  });
+});
+
+// Trend chart
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: {
+    labels: D.sales.map((_,i) => i+1),
+    datasets: [{ label:'Sales ($K)', data: D.sales,
+      borderColor:'#00f0ff', borderWidth:2,
+      backgroundColor:'rgba(0,240,255,.08)',
+      fill:true, tension:.35, pointRadius:0, pointHoverRadius:5 }]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{title:{display:true,text:'Campaign #',color:'#94a3b8',font:{size:11}},grid:gridOpts,ticks:tickOpts},
+      y:{grid:gridOpts,ticks:tickOpts}
+    },
+    animation:{duration:1200,easing:'easeInOutCubic'}
+  }
+});
+
+// Distribution
+(function(){
+  const mn=Math.min(...D.sales), mx=Math.max(...D.sales);
+  const bins=10, bw=(mx-mn)/bins;
+  const counts=new Array(bins).fill(0);
+  const labels=[];
+  for(let i=0;i<bins;i++) labels.push(`${(mn+i*bw).toFixed(1)}`);
+  D.sales.forEach(s=>{ const b=Math.min(Math.floor((s-mn)/bw),bins-1); counts[b]++; });
+  new Chart(document.getElementById('distChart'),{
+    type:'bar',
+    data:{ labels, datasets:[{ label:'Campaigns', data:counts,
+      backgroundColor:'rgba(124,58,237,.5)', borderColor:'#7c3aed', borderWidth:2, borderRadius:6 }] },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{...tickOpts,maxRotation:45,font:{size:9}},grid:gridOpts},
+        y:{title:{display:true,text:'# Campaigns',color:'#94a3b8',font:{size:11}},grid:gridOpts,ticks:tickOpts}
+      },
+      animation:{duration:900}
+    }
+  });
+})();
+
+// Grouped bar
+(function(){
+  const n=30, labels=D.tv.slice(0,n).map((_,i)=>i+1);
+  new Chart(document.getElementById('groupedBar'),{
+    type:'bar',
+    data:{ labels, datasets:[
+      {label:'TV',        data:D.tv.slice(0,n),    backgroundColor:'rgba(0,240,255,.4)',  borderColor:'#00f0ff',borderWidth:1,borderRadius:4},
+      {label:'Radio',     data:D.radio.slice(0,n), backgroundColor:'rgba(124,58,237,.4)', borderColor:'#7c3aed',borderWidth:1,borderRadius:4},
+      {label:'Newspaper', data:D.news.slice(0,n),  backgroundColor:'rgba(245,158,11,.4)', borderColor:'#f59e0b',borderWidth:1,borderRadius:4},
+      {label:'Sales', data:D.sales.slice(0,n), type:'line', tension:.4, yAxisID:'y2',
+       borderColor:'#ef4444', backgroundColor:'transparent', borderWidth:2, pointRadius:0}
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}},
+      scales:{
+        x:{grid:gridOpts,ticks:tickOpts},
+        y:{title:{display:true,text:'Ad Spend ($K)',color:'#94a3b8',font:{size:11}},grid:gridOpts,ticks:tickOpts},
+        y2:{position:'right',title:{display:true,text:'Sales ($K)',color:'#ef4444',font:{size:11}},ticks:{color:'#ef4444'},grid:{display:false}}
+      },
+      animation:{duration:1100}
+    }
+  });
+})();
+
+// ═══════════════════════════════════════════
+//  INPUT-DRIVEN PIE
+// ═══════════════════════════════════════════
+const pieChart = new Chart(document.getElementById('pieChart'), {
+  type:'doughnut',
+  data:{ labels:['TV','Radio','Newspaper'],
+    datasets:[{ data:[1,1,1],
+      backgroundColor:['rgba(0,240,255,.65)','rgba(124,58,237,.65)','rgba(245,158,11,.65)'],
+      borderColor:['#00f0ff','#7c3aed','#f59e0b'], borderWidth:2, hoverOffset:10 }] },
+  options:{
+    responsive:true, maintainAspectRatio:false, cutout:'62%',
+    plugins:{
+      legend:{position:'bottom',labels:{color:'#94a3b8',padding:12,font:{size:12}}},
+      tooltip:{callbacks:{label: ctx=>{
+        const tot=ctx.dataset.data.reduce((a,b)=>a+b,0);
+        return ` $${ctx.parsed.toFixed(1)}K — ${(ctx.parsed/tot*100).toFixed(1)}%`;
+      }}}
+    },
+    animation:{duration:600,easing:'easeInOutQuart'}
+  }
+});
+
+// ═══════════════════════════════════════════
+//  HEATMAP builder
+// ═══════════════════════════════════════════
+function buildHeatmap(corr) {
+  const keys=['TV','Radio','Newspaper','Sales'];
+  const c=document.getElementById('heatmap-container');
+  c.innerHTML='';
+  const g=document.createElement('div'); g.className='heatmap-grid';
+  g.innerHTML=`<div></div>`+keys.map(k=>`<div class="hm-header">${k}</div>`).join('');
+  keys.forEach(row=>{
+    g.innerHTML+=`<div class="hm-label">${row}</div>`;
+    keys.forEach(col=>{
+      const val=corr[row]?.[col]??0, abs=Math.abs(val);
+      let bg,color;
+      if(abs>.85){bg=val>0?'rgba(0,240,255,.6)':'rgba(239,68,68,.6)';color='#fff';}
+      else if(abs>.6){bg=val>0?'rgba(0,240,255,.35)':'rgba(239,68,68,.35)';color='#e2e8f0';}
+      else if(abs>.3){bg=val>0?'rgba(0,240,255,.15)':'rgba(239,68,68,.15)';color='#94a3b8';}
+      else{bg='rgba(255,255,255,.04)';color='#475569';}
+      g.innerHTML+=`<div class="hm-cell" style="background:${bg};color:${color};" title="${row}↔${col}: ${val}">${val.toFixed(2)}</div>`;
+    });
+  });
+  c.appendChild(g);
+}
+
+// Initial heatmap from dataset
+buildHeatmap(D.corr_matrix);
+
+// ═══════════════════════════════════════════
+//  MASTER UPDATE — fires on every input change
+// ═══════════════════════════════════════════
+async function updateAll() {
+  const tv    = parseFloat(document.getElementById('inp-tv').value)    || 0;
+  const radio = parseFloat(document.getElementById('inp-radio').value) || 0;
+  const news  = parseFloat(document.getElementById('inp-news').value)  || 0;
+  if (tv===0 && radio===0 && news===0) return;
+
+  try {
+    const res = await fetch('/api/input_analytics', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({tv, radio, news})
+    });
+    const d = await res.json();
+    if (d.error) return;
+    const ci = d.corr_input;
+
+    // hide hint, show pred
+    document.getElementById('input-hint').style.display = 'none';
+    document.getElementById('pred-box').style.display   = 'block';
+    document.getElementById('pred-val').textContent     = ci.predicted.toFixed(2);
+
+    // ── KPI cards ──────────────────────────────────────
+    const bestLabel = ci.tv_contrib >= ci.radio_contrib && ci.tv_contrib >= ci.news_contrib ? '📺 TV'
+                    : ci.radio_contrib >= ci.news_contrib ? '📻 Radio' : '📰 Newspaper';
+    document.getElementById('kpi-best').textContent     = bestLabel;
+    document.getElementById('kpi-best-sub').textContent = `for your $${d.total}K budget`;
+    document.getElementById('kpi-pred').textContent     = ci.predicted.toFixed(2) + 'K';
+    document.getElementById('kpi-pred-sub').textContent = `TV $${tv}K · Radio $${radio}K · News $${news}K`;
+    document.getElementById('kpi-tv-pct').textContent   = d.pie.tv + '%';
+    document.getElementById('kpi-tv-sub').textContent   = `TV share of $${d.total}K`;
+    document.getElementById('kpi-opt').textContent      = d.optimizer.predicted_sales + 'K';
+    document.getElementById('kpi-opt-sub').textContent  = `best possible for $${d.total}K`;
+
+    // ── Pie ────────────────────────────────────────────
+    pieChart.data.datasets[0].data = [tv, radio, news];
+    pieChart.update();
+    document.getElementById('pie-subtitle').textContent =
+      `TV ${d.pie.tv}% · Radio ${d.pie.radio}% · Newspaper ${d.pie.news}%`;
+
+    // ── Contribution bars ──────────────────────────────
+    document.getElementById('bar-tv').style.width    = (ci.tv    * 100).toFixed(1) + '%';
+    document.getElementById('bar-radio').style.width = (ci.radio * 100).toFixed(1) + '%';
+    document.getElementById('bar-news').style.width  = (ci.news  * 100).toFixed(1) + '%';
+    document.getElementById('bar-tv-val').textContent    = (ci.tv    * 100).toFixed(1) + '%';
+    document.getElementById('bar-radio-val').textContent = (ci.radio * 100).toFixed(1) + '%';
+    document.getElementById('bar-news-val').textContent  = (ci.news  * 100).toFixed(1) + '%';
+
+    // Dynamic insight text
+    const topCh = ci.tv_contrib > ci.radio_contrib ? 'TV' : 'Radio';
+    const topAmt = Math.max(ci.tv_contrib, ci.radio_contrib).toFixed(2);
+    document.getElementById('corr-insight').innerHTML =
+      `<strong style="color:var(--accent1);">${topCh}</strong> contributes the most to your predicted sales at <strong>$${topAmt}K</strong>.
+       TV adds $${ci.tv_contrib}K · Radio adds $${ci.radio_contrib}K · Newspaper adds $${ci.news_contrib}K (base: $${ci.base}K).`;
+
+    // ── Heatmap (input neighbourhood) ─────────────────
+    buildHeatmap(d.heatmap);
+
+    // ── Scatter user point ─────────────────────────────
+    const userPred = ci.predicted;
+    scatterCharts['scatterTV'].data.datasets[1].data    = [{x: tv,    y: userPred}];
+    scatterCharts['scatterRadio'].data.datasets[1].data = [{x: radio, y: userPred}];
+    scatterCharts['scatterNews'].data.datasets[1].data  = [{x: news,  y: userPred}];
+    scatterCharts['scatterTV'].update('none');
+    scatterCharts['scatterRadio'].update('none');
+    scatterCharts['scatterNews'].update('none');
+
+    // ── Optimizer ──────────────────────────────────────
+    const op = d.optimizer;
+    document.getElementById('opt-total').textContent   = `$${d.total}K`;
+    document.getElementById('opt-tv').textContent      = `$${op.tv}K`;
+    document.getElementById('opt-radio').textContent   = `$${op.radio}K`;
+    document.getElementById('opt-news').textContent    = `$${op.newspaper}K`;
+    document.getElementById('opt-sales').textContent   = `${op.predicted_sales}K`;
+    document.getElementById('opt-current').textContent = `${op.current_sales}K`;
+    const gainEl = document.getElementById('opt-gain');
+    if (op.gain > 0.1) {
+      gainEl.textContent = `▲ +${op.gain}K gain by rebalancing`;
+      gainEl.className = 'gain-badge pos';
+    } else {
+      gainEl.textContent = `✅ Already optimal`;
+      gainEl.className = 'gain-badge zero';
+    }
+    document.getElementById('opt-panel').style.display = 'block';
+    document.getElementById('opt-empty').style.display = 'none';
+
+    // refresh bar
+    startRefreshBar();
+
+  } catch(e) { console.warn('updateAll error', e); }
+}
+
+// ═══════════════════════════════════════════
+//  Refresh bar
+// ═══════════════════════════════════════════
+let refTimer;
+function startRefreshBar() {
+  const fill = document.getElementById('ref-fill');
+  const lbl  = document.getElementById('ref-label');
+  clearInterval(refTimer);
+  let elapsed=0; const dur=5000;
+  fill.style.transition='none'; fill.style.width='0%';
+  refTimer = setInterval(()=>{
+    elapsed+=100;
+    fill.style.transition='width .1s linear';
+    fill.style.width=Math.min(elapsed/dur*100,100)+'%';
+    const rem=Math.max(0,Math.ceil((dur-elapsed)/1000));
+    lbl.textContent = rem>0 ? `auto-refresh in ${rem}s` : 'refreshing…';
+    if(elapsed>=dur){ clearInterval(refTimer); updateAll(); }
+  },100);
+}
+
+// ═══════════════════════════════════════════
+//  Input listeners
+// ═══════════════════════════════════════════
+let debounce;
+['inp-tv','inp-radio','inp-news'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',()=>{
+    clearTimeout(debounce);
+    debounce = setTimeout(updateAll, 400);
+  });
+});
+
+// ═══════════════════════════════════════════
+//  Manual optimizer override
+// ═══════════════════════════════════════════
+async function runManualOptimize() {
+  const budget = parseFloat(document.getElementById('opt-override').value);
+  if (!budget) return;
+  const btn = event.target;
+  btn.innerHTML = '<span>⏳ Optimizing…</span>'; btn.disabled = true;
+  try {
+    const res = await fetch('/api/optimize', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({budget})
+    });
+    const d = await res.json();
+    document.getElementById('opt-tv').textContent    = `$${d.tv}K`;
+    document.getElementById('opt-radio').textContent = `$${d.radio}K`;
+    document.getElementById('opt-news').textContent  = `$${d.newspaper}K`;
+    document.getElementById('opt-sales').textContent = `${d.predicted_sales}K`;
+    document.getElementById('opt-total').textContent = `$${budget}K`;
+    document.getElementById('opt-panel').style.display = 'block';
+    document.getElementById('opt-empty').style.display = 'none';
+  } catch(e) { alert('Failed.'); }
+  btn.innerHTML='<span>🔍 Optimize</span>'; btn.disabled=false;
+}
+</script>
+</body>
+</html>
