@@ -21,7 +21,8 @@ The model is built using **Multiple Linear Regression**.
 - **Target Variable**: Sales (in thousands of units).
 - **Metric**: The coefficients indicate the marginal impact of each channel on total sales.
 - Model performance evaluated using **R² Score** and **Mean Squared Error (MSE)**.  
-- Trained model saved using **Pickle (.pkl)** for reuse. 
+- Trained on dataset: car_data.csv
+- Model file: model.pkl
 
 ## 🛠️ Technologies Used
 
